@@ -75,12 +75,12 @@ def satelliteEllipse(inclination, right_ascension, time):
     coordinate = [latitude, longitude]
     
     #visible area ellipse
-    n = 64
+    n = 32
     pos = np.empty([n+1,2])
     pos[0] = coordinate
     width = (15/180)*m.pi
     height = (40/180)*m.pi
-    direction = m.cos(clockangle)   #angle of the direction of the orbit, 0 = horizontal
+    direction = m.cos(clockangle)*inclination   #angle of the direction of the orbit, 0 = horizontal
     for i in range(n):
         theta = i*((2*m.pi)/n)      #angle from point to part of ellipse, unit circle, counter clockwise
         x = m.sin(theta)*height
@@ -115,14 +115,14 @@ def period(a):
 timestamp_length = 180 #seconds
 day = 86164 #seconds, 365.25/366.25 * 24 * 3600, seconds in a sidereal day
 
+#inputs for multiple satellites
+inclinations = [(50/180)*m.pi, (80/180)*m.pi]
+right_ascensions = [(20/180)*m.pi, (50/180)*m.pi]
+altitudes = 200*10**3 #meters
 
-inclination = (90/180)*m.pi
-right_ascension = (0/180)*m.pi
-altitude = 200*10**3 #meters
-
-a = 6371000 + altitude #meters
+a = 6371000 + altitudes #meters
 period = int(period(a)) #seconds
-timelength = 30*timestamp_length
+timelength = 10*timestamp_length
 n = int(timelength/timestamp_length)
 orbits = timelength/period
 days = timelength/day
@@ -144,7 +144,6 @@ days = timelength/day
 
 #2d projection
 image = plt.imread("Gall–Peters_projection.jpg")
-
 positions = np.empty([n,2])
 positions_sun = np.empty([n,2])
 
@@ -163,9 +162,17 @@ plt.ylim(-2,2)
 #main loop
 for i in range(n):
     time = i*timestamp_length + 2505.8*day
-    point_spherical = orbit_spherical(inclination,right_ascension,time)
-    point_projection = STXY(point_spherical[0],point_spherical[1])
-    positions[i] = point_projection
+    for j in range(len(inclinations)):
+        point_spherical = orbit_spherical(inclinations[j],right_ascensions[j],time)
+        point_projection = STXY(point_spherical[0],point_spherical[1])
+        positions[j] = point_projection
+        #plt.plot(positions[:,0], positions[:,1], color = 'red')
+        
+        visibleRegion = satelliteEllipse(inclinations[j], right_ascensions[j], time)
+        for k in range(visibleRegion.shape[0]):
+            point = STXY(visibleRegion[k,0], visibleRegion[k,1])
+            plt.scatter(point[0], point[1], color='red', s = 10)
+        
     point_sun = SunPosition(time)
     point_sun_projection = STXY(point_sun[0], point_sun[1])
     positions_sun[i] = point_sun_projection
@@ -174,17 +181,15 @@ for i in range(n):
     # for i in range(illuminatedRegion.shape[0]):
     #     point = STXY(illuminatedRegion[i,0], illuminatedRegion[i,1])
     #     plt.scatter(point[0], point[1], color='yellow', s = 10)
-    visibleRegion = satelliteEllipse(inclination, right_ascension, time)
-    for i in range(visibleRegion.shape[0]):
-        point = STXY(visibleRegion[i,0], visibleRegion[i,1])
-        plt.scatter(point[0], point[1], color='red', s = 10)
+    
 for i in range(illuminatedRegion.shape[0]):
         point = STXY(illuminatedRegion[i,0], illuminatedRegion[i,1])
         plt.scatter(point[0], point[1], color='yellow', s = 10)
     
 
 #plt.scatter(positions[:,0], positions[:,1], color = 'red', s = 1)
-plt.plot(positions[:,0], positions[:,1], color = 'red')
-plt.scatter(positions_sun[29,0], positions_sun[29,1], color='yellow', s=10)
+#plt.plot(positions[:,0], positions[:,1], color = 'red')
+plt.scatter(positions_sun[n-1,0], positions_sun[n-1,1], color='yellow', s=10)
+
 #fig.savefig("day_night+visible", dpi=1000)
 plt.show()
