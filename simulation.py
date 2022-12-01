@@ -2,6 +2,7 @@ import math as m
 import matplotlib.pyplot as plt
 import numpy as np
 # import astropy.constants as c
+#this has been pushed by me LOLOLOLOL
 def orbit_cartesian(orbit_inclination, orbit_right_ascension, time): #time is in radians
     x = m.sin(time+orbit_right_ascension)*m.cos(orbit_inclination)
     y = m.sin(time-orbit_right_ascension)*m.sin(orbit_inclination)
