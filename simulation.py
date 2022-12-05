@@ -79,26 +79,26 @@ def satelliteEllipse(inclination, right_ascension, time):
     #width = (10/180)*m.pi #longitude
     #height = (45/180)*m.pi #latitude
     
-    height = (4.2/180)*m.pi  #function of altitude and observing time 
-    width = (2/180)*m.pi     #function of altitude and observing time
+    width = (6.08/180)*m.pi  #function of altitude and observing time
+    height = (30/180)*m.pi     #function of altitude and observing time
     
     direction = m.cos(clockangle)*inclination   #angle of the direction of the orbit, 0 = horizontal
     x1 = height
     x2 = (2*m.pi*(measure_time/period) - height)
     x3 = x2
-    x4 = x2
+    x4 = x1
     y1 = width
     y2 = -width
     y3 = y1
     y4 = y2
-    x1rotated = x1*m.cos(direction) - y1*m.sin(direction)      #rotation matrix for 2d, CCW rotation
-    y1rotated = x1*m.sin(direction) + y1*m.cos(direction)
-    x2rotated = x2*m.cos(direction) - y2*m.sin(direction)      #rotation matrix for 2d, CCW rotation
-    y2rotated = x2*m.sin(direction) + y2*m.cos(direction)
-    x3rotated = x3*m.cos(direction) - y3*m.sin(direction)
-    y3rotated = x3*m.sin(direction) + y3*m.cos(direction)
-    x4rotated = x4*m.cos(direction) - y4*m.sin(direction)
-    y4rotated = x4*m.sin(direction) + y4*m.cos(direction)
+    x1rotated = x1*m.cos(direction) + y1*m.sin(direction)      #rotation matrix for 2d, CCW rotation
+    y1rotated = -x1*m.sin(direction) + y1*m.cos(direction)
+    x2rotated = x2*m.cos(direction) + y2*m.sin(direction)      #rotation matrix for 2d, CCW rotation
+    y2rotated = -x2*m.sin(direction) + y2*m.cos(direction)
+    x3rotated = x3*m.cos(direction) + y3*m.sin(direction)
+    y3rotated = -x3*m.sin(direction) + y3*m.cos(direction)
+    x4rotated = x4*m.cos(direction) + y4*m.sin(direction)
+    y4rotated = -x4*m.sin(direction) + y4*m.cos(direction)
     coord1 = [x1rotated + coordinate[0], y1rotated + coordinate[1]]
     coord2 = [x2rotated + coordinate[0], y2rotated + coordinate[1]]
     coord3 = [x3rotated + coordinate[0], y3rotated + coordinate[1]]
@@ -152,10 +152,10 @@ day = 86164 #seconds, 365.25/366.25 * 24 * 3600, seconds in a sidereal day
 #inputs for multiple satellites
 inclinations = [(50/180)*m.pi]#, (80/180)*m.pi]
 right_ascensions = [(20/180)*m.pi]#, (50/180)*m.pi]
-altitudes = 200*10**3 #meters
+altitudes = 700*10**3 #meters
 a = 6371000 + altitudes #meters
 period = int(period(a)) #seconds
-timelength = timestamp_length
+timelength = 20*timestamp_length
 n = int(timelength/timestamp_length)
 orbits = timelength/period
 days = timelength/day
@@ -196,7 +196,7 @@ plt.ylim(-2,2)
 
 #main loop
 for i in range(n):
-    time = i*timestamp_length + 2505.8*day
+    time = i*timestamp_length + 2505.82*day
     for j in range(len(inclinations)):
         point_spherical = orbit_spherical(inclinations[j],right_ascensions[j],time)
         point_projection = STXY(point_spherical[0],point_spherical[1])
@@ -209,14 +209,15 @@ for i in range(n):
         pos2 = visibleRegion[1]
         pos3 = visibleRegion[2]
         pos4 = visibleRegion[3]
+        print(pos1, pos2, pos3, pos4)
         pos1_proj = STXY(pos1[0],pos1[1])
         pos2_proj = STXY(pos2[0],pos2[1])
         pos3_proj = STXY(pos3[0],pos3[1])
         pos4_proj = STXY(pos4[0],pos4[1])
-        plt.scatter(pos1_proj[0],pos1_proj[1], color='red', s=0.1)
-        plt.scatter(pos2_proj[0],pos2_proj[1], color='red', s=0.1)
-        plt.scatter(pos3_proj[0],pos3_proj[1], color='red', s=0.1)
-        plt.scatter(pos4_proj[0],pos4_proj[1], color='red', s=0.1)
+        plt.scatter(pos1_proj[0],pos1_proj[1], color='red', s=1)
+        plt.scatter(pos2_proj[0],pos2_proj[1], color='red', s=1)
+        plt.scatter(pos3_proj[0],pos3_proj[1], color='red', s=1)
+        plt.scatter(pos4_proj[0],pos4_proj[1], color='red', s=1)
         # for k in range(visibleRegion.shape[0]):
         #     point = STXY(visibleRegion[k,0], visibleRegion[k,1])
         #     plt.scatter(point[0], point[1], color='red', s = 10)
@@ -272,5 +273,5 @@ plt.scatter(positions_sun[n-1,0], positions_sun[n-1,1], color='yellow', s=5)
 #     point = STXY(AOI_interest[i,0], AOI_interest[i,1])
 #     plt.scatter(point[0], point[1], color = 'blue', s = 1)
 print("Done")
-#fig.savefig("AOI_1deg", dpi=1000)
+fig.savefig("test_square_observable.jpg", dpi=1000)
 plt.show()
