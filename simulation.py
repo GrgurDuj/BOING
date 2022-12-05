@@ -81,7 +81,7 @@ def satellitePrism(inclination, right_ascension, time):
         longitude += m.pi
     coordinate = [latitude, longitude]
     
-    #visible area prism
+    #visible area prism    
     width = (6.08/180)*m.pi  #function of altitude and observing time
     height = (30/180)*m.pi     #function of altitude and observing time
     
@@ -125,6 +125,8 @@ def ellipse(inclination, right_ascension):
 #parameters
 timestamp_length = 180 #seconds
 day = 86164 #seconds, 365.25/366.25 * 24 * 3600, seconds in a sidereal day
+r_earth = 6371*1000 #meters
+measure_time = 120 #seconds
 
 #inputs for multiple satellites
 inclinations = [(20/180)*m.pi] #radians
@@ -137,8 +139,6 @@ period = int(period(a)) #seconds
 n = int(timelength/timestamp_length) 
 orbits = timelength/period
 days = timelength/day
-r_earth = 6371*1000 #meters
-measure_time = 120 #seconds
 
 #figure
 image = plt.imread("Gall–Peters_projection.jpg")
@@ -179,7 +179,7 @@ for i in range(n):
         plt.scatter(pos2_proj[0],pos2_proj[1], color='red', s=1)
         plt.scatter(pos3_proj[0],pos3_proj[1], color='red', s=1)
         plt.scatter(pos4_proj[0],pos4_proj[1], color='red', s=1)
-    #Sun    
+    #Sun
     point_sun = SunPosition(time)
     point_sun_projection = STXY(point_sun[0], point_sun[1])
     positions_sun[i] = point_sun_projection
@@ -217,6 +217,6 @@ for i in range(n):
 # for i in range(counter):
 #     point = STXY(AOI_interest[i,0], AOI_interest[i,1])
 #     plt.scatter(point[0], point[1], color = 'blue', s = 1)
-fig.savefig("test_square_observable.jpg", dpi=1000)
+#fig.savefig("test_square_observable.jpg", dpi=1000)
 plt.show()
 print("Done")
