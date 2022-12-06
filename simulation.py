@@ -1,7 +1,9 @@
 import math as m
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 # import astropy.constants as c
+#np.set_printoptions(threshold=np.inf)
 def orbit_cartesian(orbit_inclination, orbit_right_ascension, time): #time is in radians
     x = m.sin(time+orbit_right_ascension)*m.cos(orbit_inclination)
     y = m.sin(time-orbit_right_ascension)*m.sin(orbit_inclination)
@@ -122,23 +124,58 @@ def ellipse(inclination, right_ascension):
         pos[i] = [m.sin(theta)*height + inclination,m.cos(theta)*width + right_ascension]
     return pos
 
+def DayNightMatrix(time):
+    #Sunposition
+    Earth_tilt = (23.5/180)*m.pi #Earth's tilt in radians
+    solar_inclination = Earth_tilt*m.sin((time/(day*365.25))*2*m.pi) #declination is 0 on March 21st (80th day of the year)
+    solar_right_ascension = (time/day)*2*m.pi #right ascension of sun rising
+    r = 0.5*m.pi
+    #Matrix
+    DayNightMatrix = np.zeros([n_vertical, n_horizontal])
+    n = int(m.pi/res)
+    start_ra = solar_right_ascension%(2*m.pi) - r
+    start_column = int(start_ra/res)
+    for i in range(n): #for each column in the shape
+        col = i + start_column
+        colsfromcenter = int(col - start_column - 0.5*n)
+        distancefromcenter = colsfromcenter*res/(0.5*m.pi)
+        theta = np.arccos(distancefromcenter)
+        centerrowheight = int((-solar_inclination + 0.5*m.pi)/res)
+        absoluterowsheight = int((m.sin(theta)*0.5*m.pi)/res)
+        heightrows = 2*absoluterowsheight
+        for j in range(heightrows):
+            row = int(centerrowheight - absoluterowsheight + j)
+            if(row >= DayNightMatrix.shape[0]):
+                row = int(DayNightMatrix.shape[0] - 1 - (row%DayNightMatrix.shape[0]))
+                col = int(col+n)
+            if(col >= DayNightMatrix.shape[1]):
+                col = int(col%DayNightMatrix.shape[1])
+            DayNightMatrix[row,col] = 1             
+    return DayNightMatrix
+
 #parameters
 timestamp_length = 180 #seconds
 day = 86164 #seconds, 365.25/366.25 * 24 * 3600, seconds in a sidereal day
 r_earth = 6371*1000 #meters
 measure_time = 120 #seconds
+vertical = m.pi #radians
+horizontal = 2*m.pi #radians
+
 
 #inputs for multiple satellites
 inclinations = [(20/180)*m.pi] #radians
 right_ascensions = [(20/180)*m.pi] #radians
 altitudes = 700*10**3 #meters
-timelength = 10*timestamp_length #seconds
+timelength = 1*timestamp_length #seconds
+res = (2/180)*m.pi #radians height and width per image
 
 a = 6371000 + altitudes #meters
 period = int(period(a)) #seconds
 n = int(timelength/timestamp_length) 
 orbits = timelength/period
 days = timelength/day
+n_vertical = int(vertical/res)
+n_horizontal = int(horizontal/res)
 
 #figure
 image = plt.imread("Gall–Peters_projection.jpg")
@@ -157,7 +194,7 @@ plt.ylim(-2,2)
 positions = np.empty([n,2])
 positions_sun = np.empty([n,2])
 for i in range(n):
-    time = i*timestamp_length + 2505.82*day
+    time = i*timestamp_length + 2505.32*day
     for j in range(len(inclinations)):
         #Satellite
         point_spherical = orbit_spherical(inclinations[j],right_ascensions[j],time)
@@ -190,7 +227,17 @@ for i in range(n):
     for i in range(illuminatedRegion.shape[0]):
         point = STXY(illuminatedRegion[i,0], illuminatedRegion[i,1])
         plt.scatter(point[0], point[1], color='yellow', s=5)
-
+    #DayNightMatrix
+    DayNightMatrix = DayNightMatrix(time)
+    counter = 0
+    for i in range(DayNightMatrix.shape[0]):
+        for j in range(DayNightMatrix.shape[1]):
+            if(DayNightMatrix[i,j] != 0):
+                point = [(0.5*m.pi -(m.pi/DayNightMatrix.shape[0] * i)), (2*m.pi/DayNightMatrix.shape[1] * j)]
+                point_proj = STXY(point[0],point[1])
+                plt.scatter(point_proj[0],point_proj[1],color='blue')
+                counter += 1
+    print(counter)
 #AOI matrix
 # vertical = m.pi
 # horizontal = 2*m.pi
@@ -217,6 +264,9 @@ for i in range(n):
 # for i in range(counter):
 #     point = STXY(AOI_interest[i,0], AOI_interest[i,1])
 #     plt.scatter(point[0], point[1], color = 'blue', s = 1)
-#fig.savefig("test_square_observable.jpg", dpi=1000)
+#fig.savefig("DayNightMatrix.jpg", dpi=1000)
 plt.show()
+#DayNightMatrix = DayNightMatrix(time)
+#dataframe = pd.DataFrame(DayNightMatrix)
+#dataframe.to_csv("DayNightMatrix.csv")
 print("Done")
