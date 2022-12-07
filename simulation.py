@@ -132,7 +132,7 @@ def DayNightMatrix(time):
     r = 0.5*m.pi
     #Matrix
     DayNightMatrix = np.zeros([n_vertical, n_horizontal])
-    n = int(m.pi/res)
+    n = int(2*r/res)
     start_ra = solar_right_ascension%(2*m.pi) - r
     start_column = int(start_ra/res)
     for i in range(n): #for each column in the shape
@@ -142,15 +142,21 @@ def DayNightMatrix(time):
         theta = np.arccos(distancefromcenter)
         centerrowheight = int((-solar_inclination + 0.5*m.pi)/res)
         absoluterowsheight = int((m.sin(theta)*0.5*m.pi)/res)
-        heightrows = 2*absoluterowsheight
-        for j in range(heightrows):
+        for j in range(2*absoluterowsheight):
             row = int(centerrowheight - absoluterowsheight + j)
+            #Overflowing
             if(row >= DayNightMatrix.shape[0]):
                 row = int(DayNightMatrix.shape[0] - 1 - (row%DayNightMatrix.shape[0]))
                 col = int(col+n)
+            if(row < 0):
+                row = int(-row-1)
+                col = int(col+n)
             if(col >= DayNightMatrix.shape[1]):
                 col = int(col%DayNightMatrix.shape[1])
-            DayNightMatrix[row,col] = 1             
+            if(col < 0):
+                col = int(DayNightMatrix.shape[1] + col + 1)
+            DayNightMatrix[row,col] = 1          
+            col = i + start_column 
     return DayNightMatrix
 
 #parameters
@@ -167,7 +173,7 @@ inclinations = [(20/180)*m.pi] #radians
 right_ascensions = [(20/180)*m.pi] #radians
 altitudes = 700*10**3 #meters
 timelength = 1*timestamp_length #seconds
-res = (2/180)*m.pi #radians height and width per image
+res = (3/180)*m.pi #radians height and width per image
 
 a = 6371000 + altitudes #meters
 period = int(period(a)) #seconds
@@ -194,7 +200,7 @@ plt.ylim(-2,2)
 positions = np.empty([n,2])
 positions_sun = np.empty([n,2])
 for i in range(n):
-    time = i*timestamp_length + 2505.32*day
+    time = i*timestamp_length + 100.32*day
     for j in range(len(inclinations)):
         #Satellite
         point_spherical = orbit_spherical(inclinations[j],right_ascensions[j],time)
