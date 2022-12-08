@@ -1,6 +1,7 @@
 import math as m
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy.interpolate import interp1d
 
 from Point import Point
 
@@ -81,6 +82,21 @@ def period(a):
     period = 2 * m.pi * m.sqrt((a ** 3) / mu)
     return period
 
+def visibleAreaPitchAngle(altitude):
+    minPitch = 0.7  #deg
+    maxPitch = 6.08 #deg
+    minAltitude = 450000 #m
+    maxAltitude = 700000 #m
+    interpolateLength = interp1d([minAltitude, maxAltitude], [minPitch, maxPitch])
+    print(interpolateLength(altitude), "pitch")
+    return interpolateLength(altitude)
+
+def visibleAreaRollAngle(altitude):
+    # corresponds to 30deg of roll from sat perspective (15 each side)
+    roll = 0.0048310913 * (altitude/1000) + 0.00623608
+    print(roll, "roll")
+    # roll gives observable angle with respect to the center of earth
+    return roll
 
 def satellitePrism(inclination, right_ascension, time):
     # satellite position
@@ -98,22 +114,22 @@ def satellitePrism(inclination, right_ascension, time):
     coordinate = Point(latitude, longitude)
 
     # visible area prism
-    width = (6.08 / 180) * m.pi  # function of altitude and observing time
-    height = (30 / 180) * m.pi  # function of altitude and observing time
+    height = (6.08 / 180) * m.pi  # function of altitude and observing time
+    width = (30 / 180) * m.pi  # function of altitude and observing time
 
     # rotation
     direction = m.cos(clockangle) * inclination  # angle of the direction of the orbit, 0 = horizontal
     '''
-    point1 = [height,width]
-    point2 = [(2*m.pi*(measure_time/period) - height),-width]
-    point3 = [(2*m.pi*(measure_time/period) - height),width]
-    point4 = [height,-width]
+    point1 = [width,height]
+    point2 = [(2*m.pi*(measure_time/period) - width),-height]
+    point3 = [(2*m.pi*(measure_time/period) - width),height]
+    point4 = [width,-height]
     '''
     points = np.empty(4, dtype=Point)
-    points.put(0, Point(height, width))
-    points.put(1, Point(2 * m.pi * (measure_time / period) - height, -width))
-    points.put(2, Point(2 * m.pi * (measure_time / period) - height, width))
-    points.put(3, Point(height, -width))
+    points.put(0, Point(width, height))
+    points.put(1, Point(2 * m.pi * (measure_time / period) - width, -height))
+    points.put(2, Point(2 * m.pi * (measure_time / period) - width, height))
+    points.put(3, Point(width, -height))
     rotation_matrix = [[m.cos(direction), m.sin(direction)],
                        [-m.sin(direction), m.cos(direction)]]  # CW rotation matrix
     pointsRotated = np.empty(4, dtype=Point)
@@ -150,26 +166,20 @@ def satellitePrism(inclination, right_ascension, time):
 
 
 def calculateObservableArea(visibleRegionInput, res):
-    n_vertical = int(m.pi / res)
-    n_horizontal = int(2 * m.pi / res)
-    observableAreaOutput = np.zeros([n_vertical, n_horizontal])
-    min_lat, min_long, max_lat, max_long = m.pi, 2 * m.pi, -m.pi, 0
-    for index in range(4):
-        if visibleRegionInput[index].latitude % m.pi > max_lat:
-            max_lat = visibleRegionInput[index].latitude % m.pi
-        if visibleRegionInput[index].latitude % m.pi < min_lat:
-            min_lat = visibleRegionInput[index].latitude % m.pi
-        if visibleRegionInput[index].longitude % (2 * m.pi) > max_long:
-            max_long = visibleRegionInput[index].longitude % (2 * m.pi)
-        if visibleRegionInput[index].longitude % (2 * m.pi) < min_long:
-            min_long = visibleRegionInput[index].longitude % (2 * m.pi)
+    xycoords = np.empty(4, dtype=Point)
+    count = 0
+    for point in visibleRegionInput:
+        xycoords.put(count, STXY(point.latitude, point.longitude))
+        count += 1
 
-    for latitude in range(-n_vertical, n_vertical):
-        for longitude in range(n_horizontal):
-            if (((latitude * res < max_lat) and (latitude * res > min_lat))
-                    and ((longitude * res < max_long) and (longitude * res > min_long))):
-                observableAreaOutput.put([latitude, longitude], 1)
-    np.savetxt("observableAreaOutput.csv", observableAreaOutput)
+    for point2 in xycoords:
+        print(str(point2.latitude) + ", " + str(point2.longitude))
+        plt.scatter(point2.latitude, point2.longitude, color='blue', s=3)
+
+    # dayNightMatrix = np.zeros([n_vertical, n_horizontal])
+    #for column in range(n_vertical):
+
+
 
 
 def ellipse(inclination, right_ascension):
@@ -192,8 +202,8 @@ measure_time = 120  # seconds
 # inputs for multiple satellites
 inclinations = [(20 / 180) * m.pi]  # radians
 right_ascensions = [(20 / 180) * m.pi]  # radians
-altitudes = 700 * 10 ** 3  # meters
-timelength = 1 * timestamp_length  # seconds
+altitudes = 500 * 10 ** 3  # meters
+timelength = 5 * timestamp_length  # seconds
 
 a = 6371000 + altitudes  # meters
 period = int(period(a))  # seconds
@@ -218,6 +228,8 @@ plt.ylim(-2, 2)
 positions = np.empty(n, dtype=Point)
 positions_sun = np.empty(n, dtype=Point)
 for i in range(n):
+    visibleAreaPitchAngle(450000)
+    visibleAreaRollAngle(450000)
     time = i * timestamp_length + 2505.82 * day
     for j in range(len(inclinations)):
         # Satellite
