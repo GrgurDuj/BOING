@@ -167,6 +167,18 @@ measure_time = 120 #seconds
 vertical = m.pi #radians
 horizontal = 2*m.pi #radians
 
+#Matrices importing
+AOI_matrix = np.loadtxt("AOI_matrix.csv", delimiter=',', dtype=int)
+#print(AOI_matrix.shape)
+counter = 0
+for i in range(AOI_matrix.shape[0]):
+    for j in range(AOI_matrix.shape[1]):
+        if(AOI_matrix[i,j] != 0):
+            point = [(0.5*m.pi -(m.pi/AOI_matrix.shape[0] * i)), (2*m.pi/AOI_matrix.shape[1] * j)]
+            point_proj = STXY(point[0],point[1])
+            #plt.scatter(point_proj[0],point_proj[1],color='blue')
+            counter += 1
+print(counter)            
 
 #inputs for multiple satellites
 inclinations = [(20/180)*m.pi] #radians
@@ -200,7 +212,7 @@ plt.ylim(-2,2)
 positions = np.empty([n,2])
 positions_sun = np.empty([n,2])
 for i in range(n):
-    time = i*timestamp_length + 100.32*day
+    time = i*timestamp_length + 250.52*day
     for j in range(len(inclinations)):
         #Satellite
         point_spherical = orbit_spherical(inclinations[j],right_ascensions[j],time)
@@ -241,9 +253,20 @@ for i in range(n):
             if(DayNightMatrix[i,j] != 0):
                 point = [(0.5*m.pi -(m.pi/DayNightMatrix.shape[0] * i)), (2*m.pi/DayNightMatrix.shape[1] * j)]
                 point_proj = STXY(point[0],point[1])
-                plt.scatter(point_proj[0],point_proj[1],color='blue')
+                #plt.scatter(point_proj[0],point_proj[1],color='blue')
                 counter += 1
     print(counter)
+    
+    #AOI_matrix
+    # counter = 0
+    # for i in range(AOI_matrix.shape[0]):
+    #     for j in range(AOI_matrix.shape[1]):
+    #         if(AOI_matrix[i,j] != 0):
+    #             point = [(0.5*m.pi -(m.pi/DayNightMatrix.shape[0] * i)), (2*m.pi/DayNightMatrix.shape[1] * j)]
+    #             point_proj = STXY(point[0],point[1])
+    #             plt.scatter(point_proj[0],point_proj[1],color='blue')
+    #             counter += 1
+                
 #AOI matrix
 # vertical = m.pi
 # horizontal = 2*m.pi
