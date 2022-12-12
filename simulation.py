@@ -120,9 +120,14 @@ def satellitePrism(inclination, right_ascension, time):
     coordinate = Point(latitude, longitude)
 
     # visible area prism
+
     height = (6.08 / 180) * m.pi  # function of altitude and observing time
     width = (30 / 180) * m.pi  # function of altitude and observing time
 
+    '''
+    height = visibleAreaPitchAngle(altitude)  # function of altitude and observing time
+    width = visibleAreaRollAngle(altitude) # function of altitude and observing time
+    '''
     # rotation
     direction = m.cos(clockangle) * inclination  # angle of the direction of the orbit, 0 = horizontal
     '''
@@ -206,7 +211,7 @@ def calculateObservableArea(visibleRegionInput, res):
                 pointFirst = Point((0.5 * m.pi - (m.pi / observableAreaMatrix.shape[0] * i)), (2 * m.pi / observableAreaMatrix.shape[1] * j))
                 pointProjected = STXY(pointFirst.latitude, pointFirst.longitude)
                 plt.scatter(pointProjected.latitude, pointProjected.longitude, color='green')
-
+    print("saving")
     np.savetxt("observableAreaMatrix.csv", observableAreaMatrix, delimiter=',')
 
     return observableAreaMatrix
@@ -223,7 +228,7 @@ def ellipse(inclination, right_ascension):
     return pos
 
 
-def DayNightMatrix(time):
+def dayNightMatrix(time):
     # Sunposition
     Earth_tilt = (23.5 / 180) * m.pi  # Earth's tilt in radians
     solar_inclination = Earth_tilt * m.sin(
@@ -287,13 +292,13 @@ print(counter)
 # inputs for multiple satellites
 inclinations = [(20 / 180) * m.pi]  # radians
 right_ascensions = [(20 / 180) * m.pi]  # radians
-altitudes = 700 * 10 ** 3  # meters
-timelength = 1 * timestamp_length  # seconds
+altitudes = 700 * 10 ** 3
+timelength = 15 * timestamp_length  # seconds
 res = (3 / 180) * m.pi  # radians height and width per image
 
 a = 6371000 + altitudes  # meters
 period = int(calcPeriod(a))  # seconds
-n = int(timelength / timestamp_length)
+numberOfSteps = int(timelength / timestamp_length)
 orbits = timelength / period
 days = timelength / day
 
@@ -311,13 +316,10 @@ plt.xlim(0, 2 * m.pi)
 plt.ylim(-2, 2)
 
 # Main loop
-positions = np.empty(n, dtype=Point)
-positions_sun = np.empty(n, dtype=Point)
-for i in range(n):
-    time = i * timestamp_length + 250.52 * day
-    visibleAreaPitchAngle(450000)
-    visibleAreaRollAngle(450000)
-    time = i * timestamp_length + 2505.82 * day
+positions = np.empty(numberOfSteps, dtype=Point)
+positions_sun = np.empty(numberOfSteps, dtype=Point)
+for i in range(numberOfSteps):
+    time = i * timestamp_length + 2503.47 * day
     for j in range(len(inclinations)):
         # Satellite
         point_spherical = orbit_spherical(inclinations[j], right_ascensions[j], time)
@@ -365,7 +367,7 @@ for i in range(n):
         point = STXY(illuminatedRegion[i].latitude, illuminatedRegion[i].longitude)
         plt.scatter(point.latitude, point.longitude, color='yellow', s=5)
     # DayNightMatrix
-    DayNightMatrix = DayNightMatrix(time)
+    DayNightMatrix = dayNightMatrix(time)
     counter = 0
     for i in range(DayNightMatrix.shape[0]):
         for j in range(DayNightMatrix.shape[1]):
