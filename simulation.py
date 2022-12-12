@@ -288,7 +288,11 @@ horizontal = 2 * m.pi  # radians
 
 # Matrices importing
 AOI_matrix = np.loadtxt("AOI_matrix.csv", delimiter=',', dtype=int)
-# print(AOI_matrix.shape)
+CLOUD_matrix = ((np.delete((np.loadtxt("clouds_integer_yearly.csv", delimiter=',', skiprows = 1, dtype=str)), 0, 1)).astype(float)).astype(int)
+#DATA_matrix = AOI_matrix*CLOUD_matrix
+#print(DATA_matrix, DATA_matrix.shape)
+
+
 counter = 0
 for i in range(AOI_matrix.shape[0]):
     for j in range(AOI_matrix.shape[1]):
