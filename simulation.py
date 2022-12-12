@@ -175,32 +175,25 @@ def satellitePrism(inclination, right_ascension, time):
 def isInRectangle(vertices, originalPoint):
     point = sg.Point(originalPoint.latitude, originalPoint.longitude)
     polygon = Polygon([(vertices[0].latitude, vertices[0].longitude),
-                      (vertices[1].latitude, vertices[1].longitude),
                       (vertices[2].latitude, vertices[2].longitude),
+                      (vertices[1].latitude, vertices[1].longitude),
                        (vertices[3].latitude, vertices[3].longitude)])
     return polygon.contains(point)
 
 
 def calculateObservableArea(visibleRegionInput, res):
-    xycoords = np.empty(4, dtype=Point)
-    numberOfVertices = 0
     vertical = m.pi
     horizontal = 2 * m.pi
     n_vertical = int(vertical / res)
     n_horizontal = int(horizontal / res)
     observableAreaMatrix = np.zeros([n_vertical, n_horizontal])
-
-    for point in visibleRegionInput:
-        xycoords.put(numberOfVertices, STXY(point.latitude, point.longitude))
-        numberOfVertices += 1
-
-    for point in xycoords:
-        print(str(point.latitude) + ", " + str(point.longitude))
-        plt.scatter(point.latitude, point.longitude, color='blue', s=3)
-
     matrixPosition = []
-    for point in xycoords:
-        matrixPosition.append(Point(m.degrees(point.latitude), m.degrees(point.longitude)))
+
+    for vertex in visibleRegionInput:
+        latitude = (vertex.latitude * -1) + (m.pi/2)
+        print("fixed", latitude, "original", vertex.latitude, "in deg", m.degrees(latitude))
+        matrixPosition.append(Point(int(m.degrees(latitude)), int(m.degrees((vertex.longitude % (2 * m.pi))))))
+        print(matrixPosition[-1].toString())
 
     for position in matrixPosition:
         observableAreaMatrix[int(position.latitude)][int(position.longitude)] = 1
@@ -208,22 +201,16 @@ def calculateObservableArea(visibleRegionInput, res):
     for i in range(n_horizontal):
         for j in range(n_vertical):
             if isInRectangle(matrixPosition, Point(i, j)):
-                observableAreaMatrix[i][j] = observableAreaMatrix[i][j] + 2
+                observableAreaMatrix[i][j] = 1
+
+    for i in range(observableAreaMatrix.shape[0]):
+        for j in range(observableAreaMatrix.shape[1]):
+            if observableAreaMatrix[i, j] != 0:
+                pointFirst = Point((0.5 * m.pi - (m.pi / observableAreaMatrix.shape[0] * i)), (2 * m.pi / observableAreaMatrix.shape[1] * j))
+                pointProjected = STXY(pointFirst.latitude, pointFirst.longitude)
+                plt.scatter(pointProjected.latitude, pointProjected.longitude, color='green')
 
     np.savetxt("observableAreaMatrix.csv", observableAreaMatrix, delimiter=',')
-    '''
-    poly = []
-    for index in range(numberOfVertices):
-        poly.append([xycoords[index].latitude, xycoords[index].longitude])
-
-    observableAreaImage = Image.fromarray(observableAreaMatrix)
-    draw = ImageDraw.Draw(observableAreaImage)
-    draw.polygon([tuple(p) for p in poly], fill=1)
-    observableAreaMatrix = np.asarray(observableAreaImage)
-    plt.imshow(observableAreaMatrix)
-    [(0.5 * m.pi - (m.pi / DayNightMatrix.shape[0] * i)), (2 * m.pi / DayNightMatrix.shape[1] * j)]
-    np.savetxt("observableAreaMatrix.csv", observableAreaMatrix, delimiter=',')
-    '''
 
     return observableAreaMatrix
 
@@ -303,12 +290,6 @@ right_ascensions = [(20/180)*m.pi] #radians
 altitudes = 700*10**3 #meters
 timelength = 1*timestamp_length #seconds
 res = (3/180)*m.pi #radians height and width per image
-
-a = 6371000 + altitudes #meters
-period = int(calcPeriod(a)) #seconds
-n = int(timelength/timestamp_length) 
-orbits = timelength/period
-days = timelength/day
 
 a = 6371000 + altitudes  # meters
 period = int(calcPeriod(a))  # seconds
@@ -414,13 +395,7 @@ for i in range(n):
 # AOI_input = np.ones([n_vertical, n_horizontal])
 # counter = 0
 
-vertical = m.pi
-horizontal = 2 * m.pi
-res = (0.5 / 180) * m.pi
-n_vertical = int(vertical / res)
-n_horizontal = int(horizontal / res)
-AOI_input = np.ones([n_vertical, n_horizontal])
-counter = 0
+plt.show()
 '''
 for i in range(AOI_input.shape[0]):
     for j in range(AOI_input.shape[1]):
@@ -440,7 +415,7 @@ for i in range(AOI_input.shape[0]):
 #     point = STXY(AOI_interest[i,0], AOI_interest[i,1])
 #     plt.scatter(point[0], point[1], color = 'blue', s = 1)
 #fig.savefig("DayNightMatrix.jpg", dpi=1000)
-plt.show()
+
 #DayNightMatrix = DayNightMatrix(time)
 #dataframe = pd.DataFrame(DayNightMatrix)
 #dataframe.to_csv("DayNightMatrix.csv")

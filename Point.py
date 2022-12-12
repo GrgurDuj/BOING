@@ -18,3 +18,6 @@ class Point:
 
     def asArray(self):
         return [self.latitude, self.longitude]
+
+    def toString(self):
+        return "{} latitude {} longitude".format(self.latitude, self.longitude)
