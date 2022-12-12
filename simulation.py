@@ -191,9 +191,7 @@ def calculateObservableArea(visibleRegionInput, res):
 
     for vertex in visibleRegionInput:
         latitude = (vertex.latitude * -1) + (m.pi/2)
-        print("fixed", latitude, "original", vertex.latitude, "in deg", m.degrees(latitude))
-        matrixPosition.append(Point(int(m.degrees(latitude)), int(m.degrees((vertex.longitude % (2 * m.pi))))))
-        print(matrixPosition[-1].toString())
+        matrixPosition.append(Point(int(latitude/res), int((vertex.longitude % (2 * m.pi))/res)))
 
     for position in matrixPosition:
         observableAreaMatrix[int(position.latitude)][int(position.longitude)] = 1
