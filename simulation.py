@@ -127,7 +127,7 @@ def isInRectangle(vertices, originalPoint):
                        (vertices[3].latitude, vertices[3].longitude)])
     return polygon.contains(point)
 
-def calculateObservableArea(visibleRegionInput, res):
+def calculateObservableArea(visibleRegionInput):
     vertical = m.pi
     horizontal = 2 * m.pi
     n_vertical = int(vertical / res)
@@ -248,6 +248,11 @@ def dayNightMatrix(time):
 def dataMatrix(daynightmatrix, cloudcoveragematrix):
     DataMatrix = daynightmatrix*cloudcoveragematrix
     return DataMatrix
+
+def requirementMatrix(DayNightMatrix, ObservableAreaMatrix):
+    RequirementMatrix = DayNightMatrix*ObservableAreaMatrix
+    return RequirementMatrix
+
 #parameters
 timestamp_length = 180 #seconds
 day = 86164 #seconds, 365.25/366.25 * 24 * 3600, seconds in a sidereal day
@@ -257,13 +262,13 @@ vertical = m.pi #radians
 horizontal = 2*m.pi #radians
 
 #Matrices importing
-#AOI_matrix = np.loadtxt("AOI_matrix_corrected.csv", delimiter=',', dtype=int)
-cloudcoverage_matrix = np.loadtxt("cloudcoverage_map_weighted.csv", delimiter=',') #skiprows=1
-cloudcoverage_matrix = cloudcoverage_matrix[:,1:]
+# AOI_matrix = np.loadtxt("AOI_matrix_corrected.csv", delimiter=',', dtype=int)
+# cloudcoverage_matrix = np.loadtxt("cloudcoverage_map_weighted.csv", delimiter=',') #skiprows=1
+# cloudcoverage_matrix = cloudcoverage_matrix[:,1:]
 
 #inputs for multiple satellites
-inclinations = [(50/180)*m.pi] #radians
-right_ascensions = [(20/180)*m.pi] #radians
+inclinations = [(50/180)*m.pi, (10/180)*m.pi] #radians
+right_ascensions = [(20/180)*m.pi, (40/180)*m.pi] #radians
 altitudes = 700*10**3 #meters
 timelength = timestamp_length #seconds
 res = (0.1/180)*m.pi #radians height and width per image
@@ -275,6 +280,7 @@ n_horizontal = int(horizontal/res)
 n_vertical= int(vertical/res)
 orbits = timelength / period
 days = timelength / day
+numSatellites = len(inclinations)
 
 # figure
 image = plt.imread("Gall–Peters_projection.jpg")
@@ -290,63 +296,66 @@ plt.xlim(0, 2 * m.pi)
 plt.ylim(-2, 2)
 
 # Main loop
-positions = np.empty(n, dtype=Point)
-positions_sun = np.empty(n, dtype=Point)
+
+#positions_sun = np.empty(n, dtype=Point)
 
 for i in range(n):
     visibleAreaPitchAngle(450000)
     visibleAreaRollAngle(450000)
-    time = i * timestamp_length + 2600.03 * day
-    for j in range(len(inclinations)):
+    time = i * timestamp_length + 2601.06 * day
+    
+    #DayNightMatrix
+    counter = 0
+    DayNightMatrix = dayNightMatrix(time)
+    points = np.empty([DayNightMatrix.shape[0]*DayNightMatrix.shape[1],2])
+    for p in range(DayNightMatrix.shape[0]):
+        for j in range(DayNightMatrix.shape[1]):
+            if(DayNightMatrix[p,j] != 0):
+                point = [(0.5*m.pi -(m.pi/DayNightMatrix.shape[0] * p)), (2*m.pi/DayNightMatrix.shape[1] * j)]
+                point_proj = STXY(point[0],point[1])
+                points[counter,0] = point_proj.latitude
+                points[counter,1] = point_proj.longitude       
+                counter += 1
+    plt.scatter(points[:counter,0],points[:counter,1],color='yellow', s = 0.5)
+    
+    for j in range(numSatellites):
         print("main loop")
         # Satellite
-        # point_spherical = orbit_spherical(inclinations[j], right_ascensions[j], time)
-        # point_projection = STXY(point_spherical[0], point_spherical[1])
-        # positions[j] = point_projection
-        # plt.scatter(positions[j].latitude, positions[j].longitude, color='red', s=1)
+        point_spherical = orbit_spherical(inclinations[j], right_ascensions[j], time)
+        point_projection = STXY(point_spherical[0], point_spherical[1])
+        plt.scatter(point_projection.latitude, point_projection.longitude, color='red', s=1)
 
         #Visible area
-        # visibleRegion = satellitePrism(inclinations[j], right_ascensions[j], time)
-        # observableArea = calculateObservableArea(visibleRegion, (0.5 / 180) * m.pi)
-        # projections = np.empty(4, dtype=Point)
-        # OAprojections = np.empty(4, dtype=Point)
-        # for index in range(4):
-        #     #overflowing
-        #     if (visibleRegion[index].latitude > 0.5 * m.pi):
-        #         visibleRegion[index].latitude = m.pi - visibleRegion[index].latitude
-        #         visibleRegion[index].longitude += m.pi
-        #     if (visibleRegion[index].latitude < -0.5 * m.pi):
-        #         visibleRegion[index].latitude = -(m.pi + visibleRegion[index].latitude)
-        #         visibleRegion[index].longitude += m.pi
-        #     projections.put(index, STXY(visibleRegion[index].latitude, visibleRegion[index].longitude))
+        visibleRegion = satellitePrism(inclinations[j], right_ascensions[j], time)
+        ObservableAreaMatrix = calculateObservableArea(visibleRegion)
+        projections = np.empty(4, dtype=Point)
+        OAprojections = np.empty(4, dtype=Point)
+        for index in range(4):
+            #overflowing
+            if (visibleRegion[index].latitude > 0.5 * m.pi):
+                visibleRegion[index].latitude = m.pi - visibleRegion[index].latitude
+                visibleRegion[index].longitude += m.pi
+            if (visibleRegion[index].latitude < -0.5 * m.pi):
+                visibleRegion[index].latitude = -(m.pi + visibleRegion[index].latitude)
+                visibleRegion[index].longitude += m.pi
+            projections.put(index, STXY(visibleRegion[index].latitude, visibleRegion[index].longitude))
         # for projection in projections:
         #     plt.scatter(projection.latitude, projection.longitude, color='red', s=1)
-            
-    # Sun
-    # point_sun = SunPosition(time)
-    # point_sun_projection = STXY(point_sun.latitude, point_sun.longitude)
-    # positions_sun[i] = point_sun_projection
-    # plt.scatter(positions_sun[i].latitude, positions_sun[i].longitude, color='yellow', s=5)
-
-    # Illuminated area
-    # illuminatedRegion = sunCircle(time)
-    # for i in range(illuminatedRegion.shape[0]):
-    #     point = STXY(illuminatedRegion[i].latitude, illuminatedRegion[i].longitude)
-    #     plt.scatter(point.latitude, point.longitude, color='yellow', s=5)
         
-    #DayNightMatrix
-    # counter = 0
-    # DayNightMatrix = dayNightMatrix(time)
-    # points = np.empty([DayNightMatrix.shape[0]*DayNightMatrix.shape[1],2])
-    # for i in range(DayNightMatrix.shape[0]):
-    #     for j in range(DayNightMatrix.shape[1]):
-    #         if(DayNightMatrix[i,j] != 0):
-    #             point = [(0.5*m.pi -(m.pi/DayNightMatrix.shape[0] * i)), (2*m.pi/DayNightMatrix.shape[1] * j)]
-    #             point_proj = STXY(point[0],point[1])
-    #             points[counter,0] = point_proj.latitude
-    #             points[counter,1] = point_proj.longitude       
-    #             counter += 1
-    # plt.scatter(points[:counter,0],points[:counter,1],color='blue')
+        #Requirement matrix
+        counter = 0
+        RequirementMatrix = requirementMatrix(DayNightMatrix, ObservableAreaMatrix)
+        points = np.empty([DayNightMatrix.shape[0]*DayNightMatrix.shape[1],2])
+        for q in range(RequirementMatrix.shape[0]):
+            for t in range(RequirementMatrix.shape[1]):
+                if(RequirementMatrix[q,t] != 0):
+                    point = [(0.5*m.pi -(m.pi/RequirementMatrix.shape[0] * q)), (2*m.pi/RequirementMatrix.shape[1] * t)]
+                    point_proj = STXY(point[0],point[1])
+                    points[counter,0] = point_proj.latitude
+                    points[counter,1] = point_proj.longitude       
+                    counter += 1
+        plt.scatter(points[:counter,0],points[:counter,1],color='blue', s = 0.5)
+                    
     
 #AOI_matrix
 # counter = 0
@@ -359,14 +368,14 @@ for i in range(n):
 #             points[counter,0] = point_proj.latitude
 #             points[counter,1] = point_proj.longitude
 #             counter += 1
-#plt.scatter(points[:,0], points[:,1], color='blue', s = 0.01)
+# plt.scatter(points[:,0], points[:,1], color='blue', s = 0.01)
 
 #Cloud coverage matrix
 # projection_red = np.empty([60000,2])
 # projection_orange = np.empty([5400000,2])
-# projection_yellow = np.empty([620000,2])
-# projection_green = np.empty([200000,2])
-# projection_blue = np.empty([330000,2])
+# projection_yellow = np.empty([6200000,2])
+# projection_green = np.empty([2000000,2])
+# projection_blue = np.empty([3030000,2])
 # counter_red = 0
 # counter_orange = 0
 # counter_yellow = 0
@@ -374,60 +383,69 @@ for i in range(n):
 # counter_blue = 0
 # for i in range(cloudcoverage_matrix.shape[0]):
 #     for j in range(cloudcoverage_matrix.shape[1]):
-#         if(cloudcoverage_matrix[i,j] == 1):
-#             position = [(0.5*m.pi -(m.pi/cloudcoverage_matrix.shape[0] * i)), (2*m.pi/cloudcoverage_matrix.shape[1] * j)]
-#             projection = STXY(position[0],position[1])
-#             projection_red[counter_red,0] = projection.latitude
-#             projection_red[counter_red,1] = projection.longitude
-#             counter_red += 1
-#         elif(cloudcoverage_matrix[i,j] <= 2):
-#             position = [(0.5*m.pi -(m.pi/cloudcoverage_matrix.shape[0] * i)), (2*m.pi/cloudcoverage_matrix.shape[1] * j)]
-#             projection = STXY(position[0],position[1])
-#             projection_orange[counter_orange,0] = projection.latitude
-#             projection_orange[counter_orange,1] = projection.longitude
-#             counter_orange += 1
-#         elif(cloudcoverage_matrix[i,j] <= 3):
-#             position = [(0.5*m.pi -(m.pi/cloudcoverage_matrix.shape[0] * i)), (2*m.pi/cloudcoverage_matrix.shape[1] * j)]
-#             projection = STXY(position[0],position[1])
-#             projection_yellow[counter_yellow,0] = projection.latitude
-#             projection_yellow[counter_yellow,1] = projection.longitude
-#             counter_yellow += 1
-#         elif(cloudcoverage_matrix[i,j] <= 4):
-#             position = [(0.5*m.pi -(m.pi/cloudcoverage_matrix.shape[0] * i)), (2*m.pi/cloudcoverage_matrix.shape[1] * j)]
-#             projection = STXY(position[0],position[1])
-#             projection_green[counter_green,0] = projection.latitude
-#             projection_green[counter_green,1] = projection.longitude
-#             counter_green += 1
-#         else:
-#             position = [(0.5*m.pi -(m.pi/cloudcoverage_matrix.shape[0] * i)), (2*m.pi/cloudcoverage_matrix.shape[1] * j)]
-#             projection = STXY(position[0],position[1])
-#             projection_blue[counter_blue,0] = projection.latitude
-#             projection_blue[counter_blue,1] = projection.longitude
-#             counter_blue += 1
+#         if(cloudcoverage_matrix[i,j] != 0):
+#             if(cloudcoverage_matrix[i,j] == 1):
+#                 position = [(0.5*m.pi -(m.pi/cloudcoverage_matrix.shape[0] * i)), (2*m.pi/cloudcoverage_matrix.shape[1] * j)]
+#                 projection = STXY(position[0],position[1])
+#                 projection_red[counter_red,0] = projection.latitude
+#                 projection_red[counter_red,1] = projection.longitude
+#                 counter_red += 1
+#             elif(cloudcoverage_matrix[i,j] <= 2):
+#                 position = [(0.5*m.pi -(m.pi/cloudcoverage_matrix.shape[0] * i)), (2*m.pi/cloudcoverage_matrix.shape[1] * j)]
+#                 projection = STXY(position[0],position[1])
+#                 projection_orange[counter_orange,0] = projection.latitude
+#                 projection_orange[counter_orange,1] = projection.longitude
+#                 counter_orange += 1
+#             elif(cloudcoverage_matrix[i,j] <= 3):
+#                 position = [(0.5*m.pi -(m.pi/cloudcoverage_matrix.shape[0] * i)), (2*m.pi/cloudcoverage_matrix.shape[1] * j)]
+#                 projection = STXY(position[0],position[1])
+#                 projection_yellow[counter_yellow,0] = projection.latitude
+#                 projection_yellow[counter_yellow,1] = projection.longitude
+#                 counter_yellow += 1
+#             elif(cloudcoverage_matrix[i,j] <= 4):
+#                 position = [(0.5*m.pi -(m.pi/cloudcoverage_matrix.shape[0] * i)), (2*m.pi/cloudcoverage_matrix.shape[1] * j)]
+#                 projection = STXY(position[0],position[1])
+#                 projection_green[counter_green,0] = projection.latitude
+#                 projection_green[counter_green,1] = projection.longitude
+#                 counter_green += 1
+#             else:
+#                 position = [(0.5*m.pi -(m.pi/cloudcoverage_matrix.shape[0] * i)), (2*m.pi/cloudcoverage_matrix.shape[1] * j)]
+#                 projection = STXY(position[0],position[1])
+#                 projection_blue[counter_blue,0] = projection.latitude
+#                 projection_blue[counter_blue,1] = projection.longitude
+#                 counter_blue += 1
 # #print(counter_red,counter_orange,counter_yellow,counter_green,counter_blue)
 # plt.scatter(projection_red[:counter_red,0], projection_red[:counter_red,1],color='red', s = 0.1, marker='.', linewidths=0)
 # plt.scatter(projection_orange[:counter_orange,0], projection_orange[:counter_orange,1],color='orange', s = 0.1, marker='.', linewidths=0)
 # plt.scatter(projection_yellow[:counter_yellow,0], projection_yellow[:counter_yellow,1],color='yellow', s = 0.1, marker='.', linewidths=0)
 # plt.scatter(projection_green[:counter_green,0], projection_green[:counter_green,1],color='green', s = 0.1, marker='.', linewidths=0)
 # plt.scatter(projection_blue[:counter_blue,0], projection_blue[:counter_blue,1],color='blue', s = 0.1, marker='.', linewidths=0)
+  
+#Datamatrix
+# counter = 0
+# Data_matrix = dataMatrix(AOI_matrix, cloudcoverage_matrix)
+# points = []
+
+# interpolateGrayscape = interp1d([30, 0], [0, 255])
+# for i in range(Data_matrix.shape[0]):
+#         for j in range(Data_matrix.shape[1]):
+#             if(Data_matrix[i,j] == 0 or Data_matrix[i,j] > 30):
+#                 continue
+#             position = [(0.5*m.pi -(m.pi/Data_matrix.shape[0] * i)), (2*m.pi/Data_matrix.shape[1] * j + m.pi)]
+#             projection = STXY(position[0],position[1])
+#             points.append([projection.latitude, projection.longitude, interpolateGrayscape(Data_matrix[i,j])])
+#             #print(projection.latitude,projection.longitude)
+#             counter += 1
+# points = np.array(points)
+# plt.scatter(points[:,0], points[:,1], c = points[:,2], cmap='inferno', s=0.2, marker=',', linewidths=0)
+# #print(counter)
+
 print("Saving")
-# fig.savefig("CLoudcoverage_weighted.jpg", dpi=2000)     
+# fig.savefig("Datamatrix.jpg", dpi=2000)   
 
-print(cloudcoverage_matrix.shape)
-# print(cloudcoverage_matrix.shape)     
 
-# for i in range(cloudcoverage_matrix.shape[0]):
-#     for j in range(cloudcoverage_matrix.shape[1]):
-#         value = cloudcoverage_matrix[i,j]
-#         value = 1 - value
-#         if(value == 0):
-#             value = 0.001
-#         value = m.ceil(value**-1)
-#         cloudcoverage_matrix[i,j] = int(value)
-    
-# print(cloudcoverage_matrix)
+# dataframe = pd.DataFrame(Data_matrix)
+# dataframe.to_csv("Data_matrix.csv", header = False)
 
-# dataframe = pd.DataFrame(cloudcoverage_matrix)
-# dataframe.to_csv("cloudcoverage_map_weighted.csv", header = False)
 plt.show()
 print("Done")
