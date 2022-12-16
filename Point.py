@@ -1,3 +1,7 @@
+def fromArray(array):
+    return Point(array[0], array[1])
+
+
 class Point:
 
     def __init__(self, a, b):
